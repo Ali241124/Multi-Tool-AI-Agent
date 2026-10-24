@@ -4,12 +4,12 @@ import uuid
 import streamlit as st
 
 from agent.core import run_agent, reset_conversation
-from agent.memory import load_conversation, list_conversations
+from agent.memory import (
+    load_conversation,
+    list_conversations,
+    rename_conversation,
+)
 
-
-# -----------------------------
-# Page configuration
-# -----------------------------
 
 st.set_page_config(
     page_title="Multi-Tool AI Agent",
@@ -19,9 +19,7 @@ st.set_page_config(
 )
 
 
-# -----------------------------
-# Custom styling
-# -----------------------------
+# -------------------- STYLING --------------------
 
 st.markdown(
     """
@@ -58,64 +56,131 @@ st.markdown(
 )
 
 
-# -----------------------------
-# Session state
-# -----------------------------
+# -------------------- SESSION STATE --------------------
 
 if "conversation_id" not in st.session_state:
     st.session_state.conversation_id = uuid.uuid4().hex[:8]
 
 
-# -----------------------------
-# Sidebar
-# -----------------------------
+def create_new_chat() -> None:
+    """Start a new conversation without deleting saved chats."""
+
+    st.session_state.conversation_id = uuid.uuid4().hex[:8]
+
+
+def delete_chat(conversation_id: str) -> None:
+    """Delete a saved chat and select a fresh chat if necessary."""
+
+    reset_conversation(conversation_id)
+
+    if st.session_state.conversation_id == conversation_id:
+        create_new_chat()
+
+
+# -------------------- SIDEBAR --------------------
 
 with st.sidebar:
     st.title("🤖 Agent Desk")
     st.caption("Your personal multi-tool assistant")
 
-    if st.button("＋  New chat", use_container_width=True):
-        st.session_state.conversation_id = uuid.uuid4().hex[:8]
+    if st.button(
+        "＋  New chat",
+        use_container_width=True,
+    ):
+        create_new_chat()
         st.rerun()
 
     st.divider()
-
     st.subheader("Recent chats")
 
     try:
         conversations = list_conversations()
+
     except Exception as error:
         conversations = []
-        st.error(f"Could not load chats: {error}")
+        st.error(f"Could not load saved chats: {error}")
 
     if not conversations:
-        st.caption("Your conversations will appear here.")
-    else:
-        for conversation in conversations:
-            chat_id = conversation["conversation_id"]
-            is_current = (
-                chat_id == st.session_state.conversation_id
-            )
+        st.caption("Your saved conversations will appear here.")
 
-            title = conversation.get("title") or "New chat"
+    for conversation in conversations:
+        chat_id = conversation["conversation_id"]
+        title = conversation.get("title") or "New chat"
 
-            label = (
-                f"●  {title}"
-                if is_current
-                else f"    {title}"
+        is_current = (
+            chat_id == st.session_state.conversation_id
+        )
+
+        # Select a conversation.
+        label = f"●  {title}" if is_current else title
+
+        if st.button(
+            label,
+            key=f"select_chat_{chat_id}",
+            use_container_width=True,
+            type="primary" if is_current else "secondary",
+        ):
+            st.session_state.conversation_id = chat_id
+            st.rerun()
+
+        # Rename and delete controls for this conversation.
+        with st.expander(
+            "Manage chat",
+            expanded=False,
+        ):
+            st.caption(f"ID: {chat_id}")
+
+            with st.form(
+                key=f"rename_form_{chat_id}",
+            ):
+                new_title = st.text_input(
+                    "Conversation title",
+                    value=title,
+                    max_chars=80,
+                    key=f"title_input_{chat_id}",
+                )
+
+                rename_submitted = st.form_submit_button(
+                    "Save title",
+                    use_container_width=True,
+                )
+
+            if rename_submitted:
+                try:
+                    rename_conversation(
+                        chat_id,
+                        new_title,
+                    )
+
+                    st.success("Chat renamed.")
+                    st.rerun()
+
+                except Exception as error:
+                    st.error(f"Could not rename chat: {error}")
+
+            st.divider()
+
+            confirm_delete = st.checkbox(
+                "I want to delete this conversation",
+                key=f"confirm_delete_{chat_id}",
             )
 
             if st.button(
-                label,
-                key=f"chat_{chat_id}",
+                "Delete this chat",
+                key=f"delete_chat_{chat_id}",
                 use_container_width=True,
+                disabled=not confirm_delete,
             ):
-                st.session_state.conversation_id = chat_id
-                st.rerun()
+                try:
+                    delete_chat(chat_id)
+                    st.rerun()
+
+                except Exception as error:
+                    st.error(f"Could not delete chat: {error}")
 
     st.divider()
-
     st.caption("Available tools")
+
     st.markdown(
         """
         - 🧮 Calculator
@@ -125,23 +190,10 @@ with st.sidebar:
         """
     )
 
-    if st.button(
-        "Delete current chat",
-        use_container_width=True,
-    ):
-        chat_id = st.session_state.conversation_id
 
-        try:
-            reset_conversation(chat_id)
-            st.session_state.conversation_id = uuid.uuid4().hex[:8]
-            st.rerun()
-        except Exception as error:
-            st.error(f"Could not delete conversation: {error}")
+# -------------------- MAIN CHAT --------------------
 
-
-# -----------------------------
-# Main chat area
-# -----------------------------
+current_id = st.session_state.conversation_id
 
 st.title("Multi-Tool AI Agent")
 st.caption(
@@ -149,20 +201,23 @@ st.caption(
     "without losing your saved history."
 )
 
-current_id = st.session_state.conversation_id
-
 st.caption(f"Conversation ID: `{current_id}`")
 
 
-# Load persisted messages for the active conversation.
+# Load the currently selected conversation.
 try:
     messages = load_conversation(current_id) or []
+
 except Exception as error:
-    st.error(f"Could not load conversation: {error}")
+    st.error(
+        "I couldn't load this conversation's history. "
+        "Your saved database has not been intentionally deleted. "
+        f"Details: {type(error).__name__}: {error}"
+    )
     messages = []
 
 
-# Display user and assistant messages.
+# Display only user-visible messages.
 for message in messages:
     role = message.get("role")
     content = message.get("content", "")
@@ -177,9 +232,7 @@ for message in messages:
         st.markdown(content)
 
 
-# -----------------------------
-# User input
-# -----------------------------
+# -------------------- CHAT INPUT --------------------
 
 question = st.chat_input("Ask me anything...")
 
@@ -188,19 +241,57 @@ if question:
         st.markdown(question)
 
     with st.chat_message("assistant"):
-        with st.spinner("Thinking and using tools if needed..."):
-            try:
-                answer = run_agent(
-                    question,
-                    conversation_id=current_id,
-                )
-                st.markdown(answer)
+        status = st.status(
+            "Thinking...",
+            expanded=True,
+        )
 
-            except Exception as error:
-                st.error(
-                    f"Something went wrong: "
-                    f"{type(error).__name__}: {error}"
+        def report_tool_event(
+            message: str,
+            state: str = "running",
+        ) -> None:
+            """Display tool activity while the agent is running."""
+
+            status.write(message)
+
+            if state == "error":
+                status.update(
+                    label="A tool encountered an error",
+                    state="error",
+                    expanded=True,
                 )
 
-    # Reload the database-backed history on the next rerun.
+            elif state == "complete":
+                status.update(
+                    label="Tool completed",
+                    state="running",
+                    expanded=True,
+                )
+
+        try:
+            answer = run_agent(
+                question,
+                conversation_id=current_id,
+                on_tool_event=report_tool_event,
+            )
+
+            status.update(
+                label="Response ready",
+                state="complete",
+                expanded=False,
+            )
+
+            st.markdown(answer)
+
+        except Exception as error:
+            status.update(
+                label="Something went wrong",
+                state="error",
+                expanded=True,
+            )
+
+            st.error(
+                f"{type(error).__name__}: {error}"
+            )
+
     st.rerun()
