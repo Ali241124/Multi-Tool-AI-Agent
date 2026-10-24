@@ -10,12 +10,7 @@ from agent.memory import (
 )
 
 
-# -----------------------------
-# Configuration
-# -----------------------------
-
 MODEL_NAME = "qwen2.5:7b"
-
 MAX_ITERATIONS = 5
 MAX_TOOL_CALLS_PER_RESPONSE = 4
 
@@ -42,12 +37,8 @@ If a tool fails, explain the limitation honestly.
 """
 
 
-# -----------------------------
-# Argument Validation
-# -----------------------------
-
 def validate_tool_arguments(name: str, arguments) -> None:
-    """Validate tool arguments before execution."""
+    """Validate tool names and arguments against their schemas."""
 
     if not isinstance(arguments, dict):
         raise ValueError("Tool arguments must be a dictionary.")
@@ -72,22 +63,16 @@ def validate_tool_arguments(name: str, arguments) -> None:
 
     if unknown_arguments:
         raise ValueError(
-            f"Unexpected arguments: "
-            f"{', '.join(sorted(unknown_arguments))}"
+            f"Unexpected arguments: {', '.join(sorted(unknown_arguments))}"
         )
 
     missing_arguments = set(required) - set(arguments)
 
     if missing_arguments:
         raise ValueError(
-            f"Missing arguments: "
-            f"{', '.join(sorted(missing_arguments))}"
+            f"Missing arguments: {', '.join(sorted(missing_arguments))}"
         )
 
-
-# -----------------------------
-# Tool Execution
-# -----------------------------
 
 def execute_tool(name: str, arguments: dict) -> dict:
     """Validate and execute a registered tool safely."""
@@ -99,7 +84,6 @@ def execute_tool(name: str, arguments: dict) -> dict:
 
     try:
         validate_tool_arguments(name, arguments)
-
         output = function(**arguments)
 
         return {"result": output}
@@ -110,37 +94,53 @@ def execute_tool(name: str, arguments: dict) -> dict:
         }
 
 
-# -----------------------------
-# Conversation Management
-# -----------------------------
-
-def reset_conversation(
-    conversation_id: str = "default",
-) -> None:
-    """Delete a conversation from persistent storage."""
+def reset_conversation(conversation_id: str = "default") -> None:
+    """Delete a conversation and its saved history."""
 
     delete_conversation(conversation_id)
 
 
-# -----------------------------
-# Main Agent
-# -----------------------------
-
 def run_agent(
     question: str,
     conversation_id: str = "default",
+    on_tool_event=None,
 ) -> str:
-    """Run the AI agent with persistent conversation memory."""
+    """
+    Run the AI agent with conversation memory and tool support.
 
+    on_tool_event is an optional callback used by the UI to report
+    tool execution progress. Existing callers do not need to change.
+    """
+
+    def notify_tool_event(
+        message: str,
+        state: str = "running",
+    ) -> None:
+        """Send a progress event to the UI when a callback is provided."""
+
+        if on_tool_event is None:
+            return
+
+        try:
+            on_tool_event(message, state)
+        except Exception:
+            # UI reporting errors should not crash the agent.
+            pass
+
+    # 1. Validate user input.
     if not isinstance(question, str) or not question.strip():
         return "Please enter a valid question."
 
-    if not conversation_id or not conversation_id.strip():
+    if (
+        not isinstance(conversation_id, str)
+        or not conversation_id.strip()
+    ):
         return "Please provide a valid conversation ID."
 
     conversation_id = conversation_id.strip()
+    question = question.strip()
 
-    # Load existing history from SQLite.
+    # 2. Load the conversation's saved messages.
     try:
         messages = load_conversation(conversation_id)
 
@@ -150,7 +150,6 @@ def run_agent(
             f"Details: {type(error).__name__}: {error}"
         )
 
-    # Create a new conversation if no saved history exists.
     if messages is None:
         messages = [
             {
@@ -159,7 +158,6 @@ def run_agent(
             }
         ]
 
-    # Ensure the current system instructions are present.
     elif not messages or messages[0].get("role") != "system":
         messages.insert(
             0,
@@ -169,15 +167,14 @@ def run_agent(
             },
         )
 
-    # Add the user's latest question.
+    # 3. Add the user's question.
     messages.append(
         {
             "role": "user",
-            "content": question.strip(),
+            "content": question,
         }
     )
 
-    # Save the question immediately.
     try:
         save_conversation(conversation_id, messages)
 
@@ -187,7 +184,7 @@ def run_agent(
             f"Details: {type(error).__name__}: {error}"
         )
 
-    # Ask the model to respond or select tools.
+    # 4. Let the model decide whether it needs tools.
     for iteration in range(MAX_ITERATIONS):
 
         try:
@@ -205,8 +202,6 @@ def run_agent(
 
         assistant_message = response.message
 
-        # Convert the SDK message to a dictionary for storage
-        # while preserving its tool-call information.
         if hasattr(assistant_message, "model_dump"):
             assistant_dict = assistant_message.model_dump(
                 exclude_none=True
@@ -216,7 +211,6 @@ def run_agent(
 
         messages.append(assistant_dict)
 
-        # Persist the assistant message and any tool requests.
         try:
             save_conversation(conversation_id, messages)
 
@@ -227,40 +221,58 @@ def run_agent(
                 f"Details: {type(error).__name__}: {error}"
             )
 
+        # 5. If the model did not request tools, return its answer.
         tool_calls = assistant_dict.get("tool_calls") or []
 
-        # If the model did not request tools, return its answer.
         if not tool_calls:
-            answer = assistant_dict.get("content") or (
-                "The model returned an empty response."
+            answer = (
+                assistant_dict.get("content")
+                or "The model returned an empty response."
             )
+
             return answer
 
-        # Prevent too many simultaneous tool requests.
+        # 6. Prevent excessive tool calls in a single response.
         if len(tool_calls) > MAX_TOOL_CALLS_PER_RESPONSE:
             return (
                 "The model requested too many tools at once. "
                 "Please try a simpler question."
             )
 
-        # Execute each requested tool.
+        # 7. Execute each requested tool.
         for tool_call in tool_calls:
-
             function_details = tool_call.get("function", {})
+
             name = function_details.get("name", "")
             arguments = function_details.get("arguments", {})
 
             print(f"\n[Agent selected tool: {name}]")
             print(f"[Arguments: {arguments}]")
 
+            notify_tool_event(
+                f"Using tool: {name}",
+                "running",
+            )
+
             result = execute_tool(name, arguments)
 
             if "error" in result:
                 print(f"[Tool error: {result['error']}]")
+
+                notify_tool_event(
+                    f"{name} failed: {result['error']}",
+                    "error",
+                )
+
             else:
                 print("[Tool executed successfully]")
 
-            # Send the tool result back to the model.
+                notify_tool_event(
+                    f"{name} completed successfully",
+                    "complete",
+                )
+
+            # 8. Give the tool's result back to the model.
             messages.append(
                 {
                     "role": "tool",
@@ -273,7 +285,6 @@ def run_agent(
                 }
             )
 
-            # Persist the tool result immediately.
             try:
                 save_conversation(conversation_id, messages)
 
@@ -283,8 +294,8 @@ def run_agent(
                     f"Details: {type(error).__name__}: {error}"
                 )
 
+    # 9. Stop if the model exceeds the iteration limit.
     return (
-        f"I reached the limit of {MAX_ITERATIONS} "
-        "agent iterations without completing the answer. "
-        "Please try a simpler question."
+        f"I reached the limit of {MAX_ITERATIONS} agent iterations "
+        "without completing the answer. Please try a simpler question."
     )

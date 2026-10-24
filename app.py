@@ -97,10 +97,12 @@ with st.sidebar:
                 chat_id == st.session_state.conversation_id
             )
 
+            title = conversation.get("title") or "New chat"
+
             label = (
-                f"●  {chat_id}"
+                f"●  {title}"
                 if is_current
-                else f"    {chat_id}"
+                else f"    {title}"
             )
 
             if st.button(
