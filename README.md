@@ -1,37 +1,65 @@
+# Multi-Tool AI Agent 🤖
 
-# Multi-Tool AI Agent
+A Python-based AI agent designed to use multiple tools to perform tasks and answer user questions. The project is being developed step by step, starting with standalone Python tools and progressing toward an LLM-powered agent that can select and execute tools intelligently.
 
-A Python-based AI agent designed to use multiple tools
-to answer questions and perform tasks.
+## 🚀 Project Goals
 
-## Current Features
+- Build an AI agent that can use multiple tools.
+- Integrate a locally running Large Language Model (LLM).
+- Implement intelligent tool selection and execution.
+- Provide a simple conversational interface.
+- Develop a modular, testable, and extensible application.
 
-- Calculator tool
-- Basic mathematical operations
-- Division-by-zero error handling
-- Local development with Python
+## 🛠️ Technology Stack
 
-## Technology Stack
+- **Python** — Core programming language
+- **Ollama** — Local LLM execution
+- **Qwen 2.5 7B** — Planned language model for tool selection
+- **FastAPI** — Planned backend API
+- **Streamlit** — Planned user interface
+- **Git & GitHub** — Version control and project hosting
 
-- Python
-- Ollama (planned LLM integration)
-- FastAPI (planned backend)
-- Streamlit (planned interface)
+## ✨ Current Features
 
-## Project Structure
+- [x] Calculator tool for basic arithmetic operations
+- [x] Division-by-zero error handling
+- [x] Date and time tool
+- [x] Separate test scripts for individual tools
+- [ ] Web search integration
+- [ ] Weather information tool
+- [ ] LLM-based tool selection
+- [ ] Automated tool execution and response generation
+- [ ] FastAPI backend
+- [ ] Interactive chat interface
+- [ ] Comprehensive automated testing
+- [ ] Deployment
+
+## 📁 Project Structure
 
 ```text
 Multi-Tool-AI-Agent/
 ├── agent/
 ├── tools/
-│   └── calculator.py
+│   ├── calculator.py
+│   └── datetime_tool.py
 ├── tests/
 ├── test_calculator.py
+├── test_datetime.py
+├── main.py
+├── requirements.txt
 ├── .gitignore
 └── README.md
 ```
 
-## Getting Started
+*Note: The structure will evolve as new components are implemented.*
+
+## ⚙️ Getting Started
+
+### Prerequisites
+
+- Python 3.11 or later
+- Git
+- Ollama (required when the LLM integration is implemented)
 
 ### 1. Clone the repository
 
@@ -40,146 +68,73 @@ git clone YOUR_GITHUB_REPOSITORY_URL
 cd Multi-Tool-AI-Agent
 ```
 
+Replace `YOUR_GITHUB_REPOSITORY_URL` with your actual GitHub repository URL.
+
 ### 2. Create a virtual environment
 
-```bash
+```powershell
 python -m venv .venv
 ```
 
-### 3. Activate it on Windows PowerShell
+### 3. Activate the environment
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
 ```
 
-### 4. Run the calculator test
+### 4. Test the calculator tool
 
-```bash
+```powershell
 python test_calculator.py
 ```
 
-## Roadmap
-
-- [x] Calculator tool
-- [ ] Date and time tool
-- [ ] Web search tool
-- [ ] Weather tool
-- [ ] LLM-based tool selection
-- [ ] FastAPI backend
-- [ ] Chat interface
-- [ ] Testing and deployment
-
-## License
-
-MIT
-```
-
-We'll update the README as we build the features. The MIT license is currently just a proposed choice; before treating the project as MIT-licensed, create a `LICENSE` file containing the actual MIT license text. If you prefer another license, we can change this later.
-
-## Step 4 — Check that Git is installed
-
-Run this in your VS Code terminal:
+### 5. Test the date and time tool
 
 ```powershell
-git --version
+python test_datetime.py
 ```
 
-If you see a version such as `git version 2.x.x`, you're ready.
+## 🧠 How It Will Work
 
-Next, configure your Git identity if you haven't already:
+The planned agent architecture follows this workflow:
 
-```powershell
-git config --global user.name "Your GitHub Name"
-git config --global user.email "YOUR_GITHUB_EMAIL"
-```
+1. The user submits a question.
+2. The LLM interprets the request.
+3. The agent selects the appropriate tool.
+4. The selected tool executes the task.
+5. The agent processes the tool's result.
+6. The LLM generates a response for the user.
 
-Replace the placeholders with your preferred commit name and email. You can use GitHub's private `noreply` email if you don't want to expose your personal email in commits.
+## 🎯 Learning Objectives
 
-## Step 5 — Initialize the repository
+This project explores practical AI engineering concepts, including:
 
-Run the following commands one at a time:
+- Python functions and modular programming
+- Tool design and execution
+- LLM integration and tool calling
+- Agent workflows and decision-making
+- API development and integration
+- Error handling and testing
+- Version control and deployment
 
-```powershell
-git init
-git add .gitignore README.md tools/calculator.py test_calculator.py
-git status
-```
+## 🔮 Future Improvements
 
-What they do:
+- Add more tools and integrations.
+- Support multi-step tool execution.
+- Implement conversation history and memory.
+- Add tool-call validation and execution limits.
+- Improve reliability and error handling.
+- Deploy the application for public access.
 
-- `git init` creates a local Git repository.
-- `git add` stages the selected project files for the first commit.
-- `git status` lets you inspect which files are staged.
+## 👨‍💻 Author
 
-We're deliberately staging specific files instead of using `git add .` for the first commit. That gives us more control over what gets uploaded.
+**Syed Ali Hassan**
 
-Check the status carefully. You should see your `.gitignore`, `README.md`, `tools/calculator.py`, and `test_calculator.py` listed as staged files. If a file is missing, check its name and location before proceeding.
+Software Engineering Graduate | Aspiring AI Engineer
 
-## Step 6 — Create the GitHub repository
+- GitHub: [Ali241124](https://github.com/Ali241124)
+- Portfolio: [syedalihassan-portfolio.vercel.app](https://syedalihassan-portfolio.vercel.app/)
 
-Open <Link url="https://github.com/new" title="GitHub — Create a new repository"/>.
+## 📄 License
 
-<box gap={3}>
-  <row align="start" gap={3}>
-    <AsyncImage query="GitHub new repository create repository form repository name visibility public private screenshot" aspectRatio="4:3" maxWidth="112px"/>
-    <box flex="1" gap={1}>
-      **Repository name**
-
-      `Multi-Tool-AI-Agent`
-    </box>
-  </row>
-  <divider color="subtle"/>
-  <row align="start" gap={3}>
-    <AsyncImage query="GitHub create a new repository public private repository visibility selection screenshot" aspectRatio="4:3" maxWidth="112px"/>
-    <box flex="1" gap={1}>
-      **Visibility**
-
-      Choose **Public** if you want recruiters to view the project, or **Private** if you'd prefer to keep it private for now.
-    </box>
-  </row>
-</box>
-
-**Important:** Do not select the options to initialize the repository with a README, `.gitignore`, or license. We've already created our local README and `.gitignore`.
-
-Click **Create repository**. Keep the resulting GitHub page open because we'll need the repository URL.
-
-## Step 7 — Commit your code
-
-Return to PowerShell:
-
-```powershell
-git commit -m "Initial commit: calculator tool"
-```
-
-A commit is a snapshot of your staged files. As the project develops, we'll make more commits to record meaningful changes.
-
-## Step 8 — Push your project to GitHub
-
-On the new GitHub repository page, copy the HTTPS repository URL. It should look like this:
-
-`https://github.com/YOUR_USERNAME/Multi-Tool-AI-Agent.git`
-
-Then run the following commands, replacing the example URL with your actual URL:
-
-```powershell
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/Multi-Tool-AI-Agent.git
-git push -u origin main
-```
-
-If GitHub requests authentication, follow its browser sign-in flow or use GitHub's supported authentication method. Your normal GitHub account password is not accepted as a Git HTTPS password.
-
-After the push succeeds, refresh the repository page. Your files should appear there.
-
----
-
-## Buddy, let's do this together
-
-Start with Steps 1–5, then send me the output of:
-
-```powershell
-git status
-```
-
-I'll check that your files are staged correctly before we commit and upload them. We'll avoid accidentally uploading `.venv` or any secrets.
-
+This project is currently under development. A license can be added once the preferred licensing terms have been selected.
