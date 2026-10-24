@@ -25,14 +25,14 @@ A Python-based AI agent designed to use multiple tools to perform tasks and answ
 - [x] Division-by-zero error handling
 - [x] Date and time tool
 - [x] Separate test scripts for individual tools
-- [ ] Web search integration
-- [ ] Weather information tool
-- [ ] LLM-based tool selection
-- [ ] Automated tool execution and response generation
-- [ ] FastAPI backend
-- [ ] Interactive chat interface
-- [ ] Comprehensive automated testing
-- [ ] Deployment
+- [x] Web search integration
+- [x] Weather information tool
+- [x] LLM-based tool selection
+- [x] Automated tool execution and response generation
+- [x] FastAPI backend
+- [x] Interactive chat interface
+- [x] Comprehensive automated testing
+- [x] Deployment
 
 ## 📁 Project Structure
 
